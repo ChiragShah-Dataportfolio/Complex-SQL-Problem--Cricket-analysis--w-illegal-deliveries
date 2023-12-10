@@ -1,0 +1,18 @@
+
+with legal as (
+SELECT * 
+  ,ceiling(row_number()over(order by ball_no)/6.0) as legal_ball
+from cricket_runs
+WHERE delivery_type = 'legal' )
+, overs as (
+SELECT legal_ball as over_nbr,sum(runs) as runs
+,lag(max(ball_no),1,0)over(order by legal_ball) + 1 as first_ball, max(ball_no) as last_ball
+FROM legal
+GROUP by legal_ball )
+
+SELECT over_nbr, max(o.runs) as legal_runs,isnull(sum(c.runs),0) as runs_in_extras_del, count(c.runs) as extra_del_runs
+,max(o.runs) + isnull(sum(c.runs),0) + count(c.runs) as Total_runs
+from overs o
+left join cricket_runs c 
+on c.delivery_type != 'legal' and c.ball_no BETWEEN o.first_ball and o.last_ball
+GROUP by over_nbr
